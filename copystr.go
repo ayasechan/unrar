@@ -42,33 +42,83 @@ func (w *lzWindow) insertOldDist(d uint64) {
 	w.oldDist[0] = d
 }
 
+// smallOverlapScalar 是重叠拷贝走逐字节线性循环的长度上限。
+// 短匹配（len 2..10 为主）调一次 copy 的开销反而大于十几次赋值，
+// 超过该长度的重叠展开才值得用倍增 copy。
+const smallOverlapScalar = 32
+
 // copyString 从窗口拷贝匹配串；非法距离填零（损坏容错）。
+// 快路径：按窗口回绕点切分为线性段，段内无回绕分支；
+// 不交叠段一次 copy，重叠段倍增展开（先搬 distance 字节再翻倍，
+// 源区已完全落定，copy 的 memmove 语义与逐字节结果一致）。
 func (w *lzWindow) copyString(length, distance uint64) {
+	if length == 0 || w.winSize == 0 {
+		return
+	}
+	if w.unpPtr >= w.winSize {
+		w.unpPtr %= w.winSize
+	}
+	// 非法距离填零：原语义为 distance > winSize，或首窗口未填满时的远距离引用。
+	if distance > w.winSize || (distance > w.unpPtr && !w.firstWinDone) {
+		for length > 0 {
+			n := w.winSize - w.unpPtr
+			if n > length {
+				n = length
+			}
+			clear(w.win[w.unpPtr : w.unpPtr+n])
+			w.unpPtr += n
+			if w.unpPtr >= w.winSize {
+				w.unpPtr = 0
+			}
+			length -= n
+		}
+		return
+	}
 	src := w.unpPtr - distance
 	if distance > w.unpPtr {
 		src += w.winSize
-		if distance > w.winSize || !w.firstWinDone {
-			for length > 0 {
-				w.win[w.unpPtr] = 0
-				w.unpPtr++
-				if w.unpPtr >= w.winSize {
-					w.unpPtr = 0
-				}
-				length--
-			}
-			return
-		}
 	}
 	for length > 0 {
-		w.win[w.unpPtr] = w.win[src]
-		src++
-		if src >= w.winSize {
-			src = 0
+		// 线性段：src 与 unpPtr 都不回绕。
+		chunk := length
+		if n := w.winSize - w.unpPtr; chunk > n {
+			chunk = n
 		}
-		w.unpPtr++
+		if n := w.winSize - src; chunk > n {
+			chunk = n
+		}
+		dst := w.unpPtr
+		switch {
+		case src >= dst || distance >= chunk:
+			// src 在后（已回绕）读必先于写，或逻辑无交叠：一次 copy。
+			copy(w.win[dst:dst+chunk], w.win[src:src+chunk])
+		case chunk <= smallOverlapScalar:
+			// 短重叠：线性逐字节，无回绕分支。
+			for i := uint64(0); i < chunk; i++ {
+				w.win[dst+i] = w.win[src+i]
+			}
+		default:
+			// 长重叠：先搬 distance 字节（与目标相邻无交叠），再倍增；
+			// 每次源区已完全写入，copy 与逐字节等价。
+			copy(w.win[dst:dst+distance], w.win[src:src+distance])
+			copied := distance
+			for copied < chunk {
+				n := copied
+				if n > chunk-copied {
+					n = chunk - copied
+				}
+				copy(w.win[dst+copied:dst+copied+n], w.win[dst:dst+n])
+				copied += n
+			}
+		}
+		w.unpPtr += chunk
 		if w.unpPtr >= w.winSize {
 			w.unpPtr = 0
 		}
-		length--
+		src += chunk
+		if src >= w.winSize {
+			src = 0
+		}
+		length -= chunk
 	}
 }
