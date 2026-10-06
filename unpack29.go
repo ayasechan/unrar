@@ -150,7 +150,9 @@ func (u *unpack29) decode(br *bitio.Reader, out io.Writer, destSize int64) error
 		if u.werr != nil {
 			return u.werr
 		}
-		u.unpPtr %= u.winSize
+		if u.unpPtr >= u.winSize {
+			u.unpPtr -= u.winSize
+		}
 		if u.prevPtr > u.unpPtr {
 			u.firstWinDone = true
 		}
@@ -160,7 +162,7 @@ func (u *unpack29) decode(br *bitio.Reader, out io.Writer, destSize int64) error
 				break
 			}
 		}
-		if (u.wrPtr-u.unpPtr)%u.winSize <= max3IncLZMatch && u.wrPtr != u.unpPtr {
+		if u.wrPtr != u.unpPtr && (u.wrPtr-u.unpPtr)%u.winSize <= max3IncLZMatch {
 			u.writeBuf30()
 			if u.werr != nil {
 				return u.werr
@@ -190,6 +192,25 @@ func (u *unpack29) decode(br *bitio.Reader, out io.Writer, destSize int64) error
 			u.unpPtr++
 		case num >= 271:
 			u.decodeLong(br, num)
+		case num == 258:
+			if u.lastLength != 0 {
+				u.copyString(u.lastLength, u.oldDist[0])
+			}
+		case num >= 259 && num < 263:
+			d := num - 259
+			dist := u.oldDist[d]
+			for i := d; i > 0; i-- {
+				u.oldDist[i] = u.oldDist[i-1]
+			}
+			u.oldDist[0] = dist
+			ln := u.tables.rd.Decode(br)
+			length := uint64(lDecode[ln]) + 2
+			if b := lBits[ln]; b > 0 {
+				length += uint64(br.GetBits()) >> (16 - b)
+				br.AddBits(uint(b))
+			}
+			u.lastLength = length
+			u.copyString(length, dist)
 		case num == 256:
 			if !u.readEndOfBlock(br) {
 				u.writeBuf30()
@@ -206,25 +227,6 @@ func (u *unpack29) decode(br *bitio.Reader, out io.Writer, destSize int64) error
 				}
 				return u.sticky
 			}
-		case num == 258:
-			if u.lastLength != 0 {
-				u.copyString(u.lastLength, u.oldDist[0])
-			}
-		case num < 263:
-			d := num - 259
-			dist := u.oldDist[d]
-			for i := d; i > 0; i-- {
-				u.oldDist[i] = u.oldDist[i-1]
-			}
-			u.oldDist[0] = dist
-			ln := u.tables.rd.Decode(br)
-			length := uint64(lDecode[ln]) + 2
-			if b := lBits[ln]; b > 0 {
-				length += uint64(br.GetBits()) >> (16 - b)
-				br.AddBits(uint(b))
-			}
-			u.lastLength = length
-			u.copyString(length, dist)
 		default: // 263..270
 			idx := num - 263
 			dist := uint64(sDDecode[idx]) + 1
@@ -341,6 +343,18 @@ func (u *unpack29) writeBuf30() {
 			}
 		}
 	}
+	// 回收已执行的 prgStack 空洞（早返分支保持原逻辑，不压缩）。
+	w := 0
+	for _, f := range u.prgStack {
+		if f != nil {
+			u.prgStack[w] = f
+			w++
+		}
+	}
+	for i := w; i < len(u.prgStack); i++ {
+		u.prgStack[i] = nil
+	}
+	u.prgStack = u.prgStack[:w]
 	u.writeArea(writtenBorder, u.unpPtr)
 	u.wrPtr = u.unpPtr
 }
@@ -590,9 +604,7 @@ func (u *unpack29) readTables(br *bitio.Reader) (bool, error) {
 	u.prevLowDist = 0
 	u.lowDistRep = 0
 	if field&0x4000 == 0 {
-		for i := range u.oldTable {
-			u.oldTable[i] = 0
-		}
+		clear(u.oldTable)
 	}
 	br.AddBits(2)
 	var bitLen [bc20bc]byte
@@ -618,7 +630,8 @@ func (u *unpack29) readTables(br *bitio.Reader) (bool, error) {
 		}
 	}
 	u.tables.bd = huff.MakeTables(bitLen[:], bc30)
-	table := make([]byte, huffTableSize30)
+	var tmp [huffTableSize30]byte
+	table := tmp[:]
 	for i := 0; i < len(table); {
 		if br.NeedRefillSmall() {
 			if !br.Refill() {
@@ -642,8 +655,9 @@ func (u *unpack29) readTables(br *bitio.Reader) (bool, error) {
 			if i == 0 {
 				return false, nil
 			}
+			prev := table[i-1]
 			for n > 0 && i < len(table) {
-				table[i] = table[i-1]
+				table[i] = prev
 				i++
 				n--
 			}
@@ -656,11 +670,12 @@ func (u *unpack29) readTables(br *bitio.Reader) (bool, error) {
 				n = uint(br.GetBits()>>9) + 11
 				br.AddBits(7)
 			}
-			for n > 0 && i < len(table) {
-				table[i] = 0
-				i++
-				n--
+			m := int(n)
+			if m > len(table)-i {
+				m = len(table) - i
 			}
+			clear(table[i : i+m])
+			i += m
 		}
 	}
 	u.tablesRead = true

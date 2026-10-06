@@ -1,6 +1,7 @@
 package rar
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -20,6 +21,11 @@ type openedVolume struct {
 
 // dataReader 把文件的分段拼成连续字节流。
 func (r *Reader) dataReader(fd *fileData) io.Reader {
+	if len(fd.segments) == 1 {
+		s := fd.segments[0]
+		v := r.vols[s.vol]
+		return io.NewSectionReader(v.ra, s.off, s.size)
+	}
 	parts := make([]io.Reader, 0, len(fd.segments))
 	for _, s := range fd.segments {
 		v := r.vols[s.vol]
@@ -64,10 +70,10 @@ func (r *Reader) scan() error {
 	if err := r.readFull(0, 0, mark[:]); err != nil {
 		return err
 	}
-	if string(mark[:8]) == string(rar5Mark) {
+	if bytes.Equal(mark[:8], rar5Mark) {
 		return r.scan5()
 	}
-	if string(mark[:7]) == string(rar4Mark) {
+	if bytes.Equal(mark[:7], rar4Mark) {
 		return r.scan4()
 	}
 	return fmt.Errorf("rar: unknown archive signature: %w", ErrUnsupported)

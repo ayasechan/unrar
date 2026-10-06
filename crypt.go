@@ -1,6 +1,7 @@
 package rar
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/binary"
@@ -172,9 +173,9 @@ func checkFile(fd *fileData, crcSum uint32, b2sum []byte, sc streamCheck) error 
 		}
 	}
 	if len(fd.blake2) > 0 {
-		if string(b2sum) == string(fd.blake2) {
+		if bytes.Equal(b2sum, fd.blake2) {
 			// 明文命中。
-		} else if sc.hasHashKey && fd.crypt5.present && string(macBlake2(b2sum, sc.hashKey[:])) == string(fd.blake2) {
+		} else if sc.hasHashKey && fd.crypt5.present && bytes.Equal(macBlake2(b2sum, sc.hashKey[:]), fd.blake2) {
 			// MAC 命中。
 		} else {
 			return mismatch
@@ -226,7 +227,7 @@ func (c *cbcReader) Read(p []byte) (int, error) {
 			}
 		}
 		c.dec.Decrypt(c.tmp[:n])
-		c.buf = append(c.buf[:0], c.tmp[:n]...)
+		c.buf = c.tmp[:n]
 	}
 	n := copy(p, c.buf)
 	c.buf = c.buf[n:]

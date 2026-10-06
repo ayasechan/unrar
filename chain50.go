@@ -39,6 +39,8 @@ func (f *File) openChain50() (io.ReadCloser, error) {
 // decodeChain50 顺序解 start..idx，目标输出到 w。
 func (r *Reader) decodeChain50(start, idx int, w io.Writer) error {
 	u := &unpack50{}
+	h := crc32.NewIEEE()
+	var b2 *blake2s.Hash
 	for i := start; i <= idx; i++ {
 		cf := r.File[i]
 		if cf.IsDir || cf.data.method == 0 {
@@ -59,21 +61,30 @@ func (r *Reader) decodeChain50(start, idx int, w io.Writer) error {
 		if cf.data.sizeUnknown {
 			dest = -1
 		}
-		h := crc32.NewIEEE()
-		var b2 *blake2s.Hash
-		var out io.Writer = h
-		if len(cf.data.blake2) > 0 {
-			b2 = blake2s.New()
-			out = io.MultiWriter(h, b2)
+		h.Reset()
+		hasB2 := len(cf.data.blake2) > 0
+		if hasB2 {
+			if b2 == nil {
+				b2 = blake2s.New()
+			} else {
+				b2.Reset()
+			}
 		}
-		if i == idx {
-			out = io.MultiWriter(out, w)
+		var out io.Writer = h
+		isTarget := i == idx
+		switch {
+		case hasB2 && isTarget:
+			out = io.MultiWriter(h, b2, w)
+		case hasB2:
+			out = io.MultiWriter(h, b2)
+		case isTarget:
+			out = io.MultiWriter(h, w)
 		}
 		if err := u.decode(br, out, dest); err != nil {
 			return err
 		}
 		var b2sum []byte
-		if b2 != nil {
+		if hasB2 {
 			sum := b2.Sum()
 			b2sum = sum[:]
 		}

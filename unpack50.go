@@ -71,6 +71,8 @@ type unpack50 struct {
 	written    int64
 	out        io.Writer
 	werr       error
+	scratch    []byte // copyBlock 复用缓冲（仅 writeBuf 内有效）。
+	deltaBuf   []byte // Delta 输出复用缓冲（仅 writeBuf 内有效）。
 }
 
 // init 初始化解包器。chain 表示固实链续接。
@@ -152,7 +154,7 @@ loop:
 				break
 			}
 		}
-		if (u.writeBorder-u.unpPtr)%u.winSize <= maxIncLZMatch5 && u.writeBorder != u.unpPtr {
+		if u.writeBorder != u.unpPtr && (u.writeBorder-u.unpPtr)%u.winSize <= maxIncLZMatch5 {
 			u.writeBuf()
 			if u.werr != nil {
 				return u.werr
@@ -168,16 +170,7 @@ loop:
 			u.unpPtr++
 		case slot >= 262:
 			u.decodeLong(br, slot)
-		case slot == 256:
-			var flt filter5
-			if !u.readFilter(br, &flt) || !u.addFilter(flt) {
-				break loop
-			}
-		case slot == 257:
-			if u.lastLength != 0 {
-				u.copyString(u.lastLength, u.oldDist[0])
-			}
-		default: // 258..261
+		case slot >= 258: // 258..261（<256、>=262 已排除）
 			d := slot - 258
 			dist := u.oldDist[d]
 			for i := d; i > 0; i-- {
@@ -188,6 +181,15 @@ loop:
 			length := slotToLength(br, ln)
 			u.lastLength = length
 			u.copyString(length, dist)
+		case slot == 257:
+			if u.lastLength != 0 {
+				u.copyString(u.lastLength, u.oldDist[0])
+			}
+		case slot == 256:
+			var flt filter5
+			if !u.readFilter(br, &flt) || !u.addFilter(flt) {
+				break loop
+			}
 		}
 		if u.werr != nil {
 			return u.werr
@@ -242,14 +244,13 @@ func (u *unpack50) decodeLong(br *bitio.Reader, slot uint) {
 
 // slotToLength 由槽位解长度（v29/v50 共用）。
 func slotToLength(br *bitio.Reader, slot uint) uint64 {
+	if slot < 8 {
+		return uint64(slot) + 2
+	}
 	var lbits uint
 	length := uint64(2)
-	if slot < 8 {
-		length += uint64(slot)
-	} else {
-		lbits = slot/4 - 1
-		length += uint64(4|(slot&3)) << lbits
-	}
+	lbits = slot/4 - 1
+	length += uint64(4|(slot&3)) << lbits
 	if lbits > 0 {
 		length += uint64(br.GetBits()) >> (16 - lbits)
 		br.AddBits(lbits)
@@ -330,7 +331,8 @@ func (u *unpack50) readTables(br *bitio.Reader) bool {
 	if u.extraDist {
 		tableSize = huffSizeX
 	}
-	table := make([]byte, tableSize)
+	var tmp [huffSizeX]byte
+	table := tmp[:tableSize]
 	for i := 0; i < len(table); {
 		if br.InAddr > br.ReadTop-5 {
 			if !u.refill(br) {
@@ -354,8 +356,9 @@ func (u *unpack50) readTables(br *bitio.Reader) bool {
 			if i == 0 {
 				return false
 			}
+			prev := table[i-1]
 			for n > 0 && i < len(table) {
-				table[i] = table[i-1]
+				table[i] = prev
 				i++
 				n--
 			}
@@ -368,11 +371,12 @@ func (u *unpack50) readTables(br *bitio.Reader) bool {
 				n = uint(br.GetBits()>>9) + 11
 				br.AddBits(7)
 			}
-			for n > 0 && i < len(table) {
-				table[i] = 0
-				i++
-				n--
+			m := int(n)
+			if m > len(table)-i {
+				m = len(table) - i
 			}
+			clear(table[i : i+m])
+			i += m
 		}
 	}
 	u.tablesRead = true
@@ -511,9 +515,12 @@ func (u *unpack50) writeBuf() {
 	}
 }
 
-// copyBlock 拷贝窗口环形段（过滤器输入恒拷贝）。
+// copyBlock 拷贝窗口环形段（过滤器输入恒拷贝，缓冲复用）。
 func (u *unpack50) copyBlock(off, n uint64) []byte {
-	out := make([]byte, n)
+	if uint64(cap(u.scratch)) < n {
+		u.scratch = make([]byte, n)
+	}
+	out := u.scratch[:n]
 	if off+n <= u.winSize {
 		copy(out, u.win[off:off+n])
 		return out
@@ -566,13 +573,16 @@ func (u *unpack50) applyFilter(data []byte, flt *filter5) []byte {
 		}
 		return data
 	case filterDelta5:
-		channels := flt.channels
-		n := uint64(len(data))
-		out := make([]byte, n)
-		src := uint64(0)
-		for ch := uint64(0); ch < uint64(channels); ch++ {
+		channels := int(flt.channels)
+		n := len(data)
+		if cap(u.deltaBuf) < n {
+			u.deltaBuf = make([]byte, n)
+		}
+		out := u.deltaBuf[:n]
+		src := 0
+		for ch := 0; ch < channels; ch++ {
 			prev := byte(0)
-			for dest := ch; dest < n; dest += uint64(channels) {
+			for dest := ch; dest < n; dest += channels {
 				prev -= data[src]
 				src++
 				out[dest] = prev

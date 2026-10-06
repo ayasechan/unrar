@@ -39,3 +39,8 @@ func (hh *Hash) Sum() [32]byte {
 	copy(out[:], hh.h.Sum(nil))
 	return out
 }
+
+// Reset 清零状态，可复用（底层 hash.Hash 透传）。
+func (hh *Hash) Reset() {
+	hh.h.Reset()
+}

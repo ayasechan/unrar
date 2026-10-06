@@ -234,9 +234,10 @@ func (v *VM) filterItanium() bool {
 				for s := uint32(0); s <= 2; s++ {
 					if mask&(1<<s) != 0 {
 						start := s*41 + 5
-						if itaniumGetBits(mem[off:], start+37, 4) == 5 {
-							o := itaniumGetBits(mem[off:], start+13, 20)
-							itaniumSetBits(mem[off:], (o-fileOffset)&0xfffff, start+13, 20)
+						chunk := mem[off:]
+						if itaniumGetBits(chunk, start+37, 4) == 5 {
+							o := itaniumGetBits(chunk, start+13, 20)
+							itaniumSetBits(chunk, (o-fileOffset)&0xfffff, start+13, 20)
 						}
 					}
 				}
@@ -306,8 +307,9 @@ func (v *VM) filterRGB() bool {
 		for i := ch; i < dataSize; i += channels {
 			var predicted uint32
 			if i >= width+3 {
-				upper := mem[dataSize+i-width]
-				upperLeft := mem[dataSize+i-width-3]
+				base := dataSize + i - width
+				upper := mem[base]
+				upperLeft := mem[base-3]
 				predicted = prev + uint32(upper) - uint32(upperLeft)
 				pa := abs32(int(predicted) - int(prev))
 				pb := abs32(int(predicted) - int(upper))
@@ -330,9 +332,10 @@ func (v *VM) filterRGB() bool {
 		}
 	}
 	for i, border := posR, dataSize-2; i < border; i += 3 {
-		g := mem[dataSize+i+1]
-		mem[dataSize+i] += g
-		mem[dataSize+i+2] += g
+		o := dataSize + i
+		g := mem[o+1]
+		mem[o] += g
+		mem[o+2] += g
 	}
 	return true
 }

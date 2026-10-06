@@ -179,9 +179,7 @@ func (r *Reader) Close() error {
 		}
 	}
 	// 口令清零。
-	for i := range r.opts.password {
-		r.opts.password[i] = 0
-	}
+	clear(r.opts.password)
 	r.opts.password = nil
 	return err
 }
