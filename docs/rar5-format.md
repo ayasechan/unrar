@@ -13,11 +13,10 @@ HEAD 通用 FLAGS：0x01 有 extra，0x02 有 data，0x04 未知块也需保留�
 ## 块类型
 
 1 MAIN：归档属性（卷号、solid、字典、恢复记录、头加密标记）。
-2 FILE：文件/目录头。私有 FLAGS：0x01 目录，0x02 有数据（否则只是目录/占位），
-0x04 solid 续流依赖，0x08 跨卷续（split-before），0x10 跨卷延（split-after），
-0x20 加密数据，0x40 扩展时间，0x80 UNIX 属性/owner 等。
-字段按序：FLAGS vint，UNP_SIZE vint，ATTR vint，MTIME（unix 时间，有标志时），
-DATA_CRC32（有数据时），压缩算法 vint（0 store，其余为 RAR5 主算法变体），
+2 FILE：文件/目录头。通用 FLAGS 见上；私有 FLAGS：0x01 目录，0x02 有 MTIME，
+0x04 有 DATA_CRC32，0x08 解压大小未知。
+字段按序：FLAGS vint，UNP_SIZE vint，ATTR vint，MTIME（fhflUtime 置位时），
+DATA_CRC32（fhflCRC32 置位时），压缩算法 vint（0 store，其余为 RAR5 主算法变体），
 HOST_OS vint，NAME_LEN vint + NAME（UTF-8）。
 3 SERVICE：注释、恢复记录等服务数据；解压跳过，但恢复流程要用。
 4 ENCRYPTION：加密参数（版本、PBKDF2 轮数、salt），头加密时整个后续头被加密。
@@ -33,7 +32,8 @@ HOST_OS vint，NAME_LEN vint + NAME（UTF-8）。
 - 每个头有 HEAD_CRC32，错则该卷损坏。
 - 每个文件数据有 CRC32；可选 BLAKE2s-256（extra/标志指示），解密后校验，
   错密码同样表现为校验失败，需映射为 ErrWrongPassword。
-- 字典大小由 MAIN extra 给出（64K~4G），实现必须限内存（窗口复用/流式）。
+- 字典大小由 MAIN extra 给出（RAR5 协议 128K~4G，7.0 扩展至 64G）；
+  本实现上限 1GB，超限报 ErrUnsupported（窗口复用/流式仍适用）。
 
 ## 解压相关注意
 

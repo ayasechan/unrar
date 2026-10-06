@@ -132,7 +132,7 @@ if err != nil {
 
 ## 资源限制
 
-- RAR4 滑动字典上限 8MB，RAR5 上限 1GB（协议最大值），PPM 模型内存上限 256MB；超出返回 `ErrUnsupported`，不会无界分配。
+- RAR4 滑动字典上限 8MB，RAR5 上限 1GB（实现上限，协议可更大；超出返回 `ErrUnsupported`），PPM 模型内存上限 256MB；不会无界分配。
 - `.rev` 重建以 1MB 分块流式进行，不一次性载入整卷。
 - 解压输出为流式，库本身不设总输出上限；调用方如需防解压炸弹，应在 `io.Copy` 处自行限流（例如 `io.LimitReader`）。
 - 损坏输入一律返回错误，不会 panic。

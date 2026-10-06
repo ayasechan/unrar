@@ -24,7 +24,7 @@ const (
 	maxFilterBlock    = 0x400000
 	maxUnpackFilters5 = 8192
 	maxWrite5         = 0x400000
-	maxWindow5        = 1 << 30 // RAR5 字典协议上限 1GB。
+	maxWindow5        = 1 << 30 // RAR5 字典实现上限 1GB（协议可更大，超限拒绝）。
 )
 
 // RAR5 过滤器类型（对齐 FilterType）。

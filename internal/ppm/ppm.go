@@ -1,3 +1,4 @@
+// Package ppm 提供 PPMd 阶模型解码器与偏移式子分配器。
 package ppm
 
 // PPMd 阶模型解码器（解码侧）。

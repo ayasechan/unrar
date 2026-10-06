@@ -2,7 +2,7 @@ package rar
 
 // lzWindow 是 LZ 解包共用的滑动窗口与匹配状态。
 // v29 与 v50 的 CopyString/InsertOldDist 语义相同（模窗口），
-// 循环顶的回绕与落盘条件各自保留（v29 掩码/v50 单减）。
+// 循环顶单减回绕，落盘条件各自保留。
 type lzWindow struct {
 	win          []byte
 	winSize      uint64

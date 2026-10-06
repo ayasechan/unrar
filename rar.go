@@ -48,7 +48,7 @@ func WithPasswordReader(fn func(file string) (string, error)) Option {
 	return func(o *Options) { o.passwordReader = fn }
 }
 
-// WithRecovery 允许用嵌入式恢复记录或恢复卷自动修复损坏/缺卷。
+// WithRecovery 允许用恢复卷自动修复损坏/缺卷。
 func WithRecovery(enable bool) Option {
 	return func(o *Options) { o.recovery = enable }
 }

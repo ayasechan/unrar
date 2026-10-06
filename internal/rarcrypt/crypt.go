@@ -1,3 +1,4 @@
+// Package rarcrypt 提供 RAR 口令编码、KDF 与 AES-CBC 解密。
 package rarcrypt
 
 import (

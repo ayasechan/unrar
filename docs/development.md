@@ -40,6 +40,8 @@ go test -run=NONE -fuzz=FuzzReader -fuzztime=60s .
 3. **内容对照**：每个夹具须经官方 `unrar t` 验证通过，再与 golden 逐字节对比后提交。
 4. **体量控制**：优先小尺寸内容；大字典、多压缩块等边界用专用小夹具覆盖，不提交超大文件。
 
+工具链（仅作打包/验证工具，不入仓库）：官方 Linux 构建如 https://www.win-rar.com/fileadmin/winrar-versions/rarlinux-x64-624.tar.gz（6.24，保留 `-ma4` 可建 RAR4；注意 7.x 已移除 RAR4 创建）。
+
 ## 编码约定
 
 - 公开 API 变更须同步更新根 `README.md`（用户视角）与本目录文档（实现视角）。
