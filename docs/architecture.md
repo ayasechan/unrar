@@ -12,7 +12,7 @@
 | `internal/rarvm` | RAR3 六种标准过滤器（E8/E8E9/Itanium/Delta/RGB/Audio，以字节码长度与 CRC32 识别类型） |
 | `internal/ppm` | PPMd 阶模型、子分配器（偏移式 arena） |
 | `internal/rarcrypt` | SHA-1（含 RAR2.9 变体）、KDF3、PBKDF2-HMAC-SHA256、AES-CBC、口令编码 |
-| `internal/blake2s` | BLAKE2s-256（标准库缺失，自实现，RFC 向量验证） |
+| `internal/blake2s` | BLAKE2s-256（基于 `golang.org/x/crypto`，amd64 汇编加速，旧纯 Go 实现金值交叉验证） |
 | `internal/rs8` | GF(256) Reed-Solomon 纠删（RAR4 恢复卷） |
 | `internal/rs16` | GF(2^16) Cauchy 矩阵 RS（RAR5 恢复卷） |
 | `internal/vint` | RAR5 小端 7bit 续位可变长整数 |
