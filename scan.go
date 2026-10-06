@@ -8,6 +8,12 @@ import (
 	"path/filepath"
 	"time"
 
+	"golang.org/x/text/encoding"
+	"golang.org/x/text/encoding/japanese"
+	"golang.org/x/text/encoding/korean"
+	"golang.org/x/text/encoding/simplifiedchinese"
+	"golang.org/x/text/encoding/traditionalchinese"
+
 	"github.com/ayasechan/unrar/internal/volumes"
 )
 
@@ -311,4 +317,23 @@ func decodeUnicodeName(raw []byte) string {
 		return string(ansi)
 	}
 	return string(out)
+}
+
+// filenameDecoders 是 RAR4 纯 ANSI 文件名可选的字符集解码表。
+// 未登记（含空与 utf-8）一律回落原字节直透，缺省行为不变。
+var filenameDecoders = map[FilenameEncoding]encoding.Encoding{
+	EncodingGBK:      simplifiedchinese.GBK,
+	EncodingBig5:     traditionalchinese.Big5,
+	EncodingShiftJIS: japanese.ShiftJIS,
+	EncodingEUCKR:    korean.EUCKR,
+}
+
+// decodeANSIName 解 RAR4 纯 ANSI 文件名；坏字节替换为 U+FFFD，不报错。
+func decodeANSIName(raw []byte, enc FilenameEncoding) string {
+	if e, ok := filenameDecoders[enc]; ok {
+		if s, err := e.NewDecoder().Bytes(raw); err == nil {
+			return string(s)
+		}
+	}
+	return string(raw)
 }

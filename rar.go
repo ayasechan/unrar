@@ -28,10 +28,11 @@ var (
 
 // Options 控制 Reader 行为，全部通过 Option 写入。
 type Options struct {
-	password       []byte
-	passwordReader func(file string) (string, error)
-	recovery       bool
-	revs           RevSet
+	password         []byte
+	passwordReader   func(file string) (string, error)
+	recovery         bool
+	revs             RevSet
+	filenameEncoding FilenameEncoding
 }
 
 // Option 写入一个配置项。
@@ -50,6 +51,24 @@ func WithPasswordReader(fn func(file string) (string, error)) Option {
 // WithRecovery 允许用嵌入式恢复记录或恢复卷自动修复损坏/缺卷。
 func WithRecovery(enable bool) Option {
 	return func(o *Options) { o.recovery = enable }
+}
+
+// FilenameEncoding 指定 RAR4 纯 ANSI 文件名的字符集。
+// 仅作用于无 Unicode 扩展的老归档；RAR5（UTF-8）与带扩展名忽略。
+type FilenameEncoding string
+
+const (
+	EncodingUTF8     FilenameEncoding = "utf-8"
+	EncodingGBK      FilenameEncoding = "gbk"
+	EncodingBig5     FilenameEncoding = "big5"
+	EncodingShiftJIS FilenameEncoding = "shift_jis"
+	EncodingEUCKR    FilenameEncoding = "euc-kr"
+)
+
+// WithFilenameEncoding 指定 RAR4 纯 ANSI 文件名的解码字符集。
+// 缺省（空或 utf-8）保持原字节直透；未知取值同样回落直透。
+func WithFilenameEncoding(enc FilenameEncoding) Option {
+	return func(o *Options) { o.filenameEncoding = enc }
 }
 
 // VolumeSet 抽象多分卷归档的卷集合。

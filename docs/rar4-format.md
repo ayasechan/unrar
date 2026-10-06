@@ -29,7 +29,8 @@ HOST_OS u8，FILE_CRC u32le（IEEE CRC32），FTIME u32le（DOS 时间，有扩�
 UNP_VER u8（15/20/29，对应 1.5/2.0/2.9+ 解包算法），METHOD u8
 （0x30 store，0x31 fastest，0x32 fast，0x33 normal，0x34 good，0x35 best），
 NAME_SIZE u16le，ATTR u32le，大文件时有 HIGH_PACK/HIGH_UNP，加密时有 SALT 8B，
-再有扩展时间，最后 NAME（flag 高位为 1 时 UTF-16LE，否则 ANSI）。
+再有扩展时间，最后 NAME（flag 高位为 1 时 UTF-16LE，否则 ANSI；
+ANSI 名经 `WithFilenameEncoding` 按指定字符集解码，缺省原字节直透）。
 
 文件私有标志：0x01 接上卷（split-before），0x02 续到下卷（split-after），
 0x04 加密，0x08 注释，0x10 solid（必须按序解，依赖之前字典状态）。

@@ -68,6 +68,16 @@ r, _ := rar.OpenReader("enc.rar", rar.WithPasswordReader(func(file string) (stri
 
 未提供口令而条目加密时，`Open` 返回 `ErrEncrypted`；口令错误返回 `ErrWrongPassword`。口令字节在使用后清零，不会出现在错误信息与日志中。
 
+### 文件名编码
+
+RAR5 文件名为 UTF-8，直接可用。RAR4 文件名带 Unicode 扩展时自动还原；纯 ANSI 名（老归档）默认原字节直透，中文 Windows 下多为 GBK，可指定解码：
+
+```go
+r, _ := rar.OpenReader("old.rar", rar.WithFilenameEncoding(rar.EncodingGBK))
+```
+
+可选 `EncodingGBK/EncodingBig5/EncodingShiftJIS/EncodingEUCKR`；缺省、`utf-8` 与未知取值均为直透。坏字节替换为 U+FFFD，不报错。
+
 ### 缺卷恢复
 
 ```go

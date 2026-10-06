@@ -315,6 +315,8 @@ func (r *Reader) parseFile4(vol int, blk *block4, pending *File) (f *File, cont 
 	name := string(nameField)
 	if blk.flags&lhdUnicode != 0 {
 		name = decodeUnicodeName(nameField)
+	} else {
+		name = decodeANSIName(nameField, r.opts.filenameEncoding)
 	}
 	name = normalizeName(name)
 
