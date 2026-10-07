@@ -50,7 +50,7 @@ for _, f := range r.File {
 
 - `Reader.File []*File`：归档内全部条目（含目录），顺序与归档内一致。
 - `Reader.Version`：`4` 或 `5`，表示检出的归档格式版本。
-- `Reader.Comment`：归档注释（无注释时为空）。
+- `Reader.Comment`：归档注释（CMT 块解出：RAR4 为 NEW_SUB，RAR5 为 SERVICE；无注释或解码失败时为空，不进 `File` 表）。RAR5 为 UTF-8；RAR4 视子块标志为 UTF-16LE 或 ANSI 原字节直透；读取时截首个 NUL（UTF-16LE 为宽 NUL）。数据加密（`-p`）归档的注释通常未加密、明文可见（CMT 自身置加密位时按解码失败留空）；头加密（`-hp`）无口令时 `OpenReader` 直接报 `ErrEncrypted`，有口令才解出注释；旧式 `0x75` 注释头整体跳过，FILE 的 `0x08` 注释标志予以忽略（文件仍按普通文件解），两者均为废弃特性。
 - `File` 字段：`Name`（归档内原样路径）、`UnpackedSize`、`Modified`、`Mode`、`IsDir`、`Encrypted`、`Solid`。`FileInfo()` 提供 `fs.FileInfo` 视图。
 - `File.Open() (io.ReadCloser, error)`：打开条目的解压数据流。每次调用返回独立流，可并发使用；调用方负责 `Close`。目录条目返回空流。固实归档中靠后的文件需从链首顺序解码，打开延迟较高，此为格式固有约束。
 
@@ -126,6 +126,7 @@ if err != nil {
 | 数据加密（`-p`） | 支持（AES-128） | 支持（AES-256） |
 | 头加密（`-hp`） | 支持 | 支持 |
 | 多分卷（含跨卷、固实跨卷、加密跨卷） | 支持 | 支持 |
+| 归档注释（CMT 块） | 支持（NEW_SUB，UTF-16LE/ANSI） | 支持（SERVICE，UTF-8） |
 | `.rev` 缺卷重建 | 支持 | 支持 |
 
 明确不支持：创建压缩包；RAR 1.5/2.0 时代算法；嵌入式恢复记录的原地修复（缺卷场景由 `.rev` 覆盖）；RAR5 中未定义的过滤器类型（按计数丢弃对应数据段并计入长度，与参考行为一致）。
@@ -133,6 +134,7 @@ if err != nil {
 ## 资源限制
 
 - RAR4 滑动字典上限 8MB，RAR5 上限 1GB（实现上限，协议可更大；超出返回 `ErrUnsupported`），PPM 模型内存上限 256MB；不会无界分配。
+- 归档注释解出上限 16MB（0x1000000 字节），声明或实测超限时 `Comment` 留空，不影响打开。
 - `.rev` 重建以 1MB 分块流式进行，不一次性载入整卷。
 - 解压输出为流式，库本身不设总输出上限；调用方如需防解压炸弹，应在 `io.Copy` 处自行限流（例如 `io.LimitReader`）。
 - 损坏输入一律返回错误，不会 panic。

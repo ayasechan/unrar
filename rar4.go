@@ -39,6 +39,8 @@ const (
 const (
 	head3Main   = 0x73
 	head3File   = 0x74
+	head3Cmt    = 0x75 // 旧式注释头：需 v15/v20 解包器，本库不支持，扫描时跳过。
+	head3NewSub = 0x7a // 子块；名为 CMT 的是归档注释。
 	head3EndArc = 0x7b
 )
 
@@ -131,15 +133,38 @@ func (r *Reader) scan4vols(readHeader func(vi int, pos int64) (*block4, error), 
 			case head3EndArc:
 				ended = true
 				r.volNext = append(r.volNext, blk.flags&earcNextVolume != 0)
+			case head3NewSub:
+				// 子块与文件头同布局；名为 CMT 的是归档注释，其余子块跳过。
+				f, cont, end, err := r.parseFile4(vi, blk, r.cmtPending)
+				if err != nil {
+					return err
+				}
+				if !cont && f.Name == cmtServiceName && r.cmtFile == nil {
+					r.cmtFile = f
+					r.cmtUnicode = subFlagsOf4(blk)&cmtUnicodeFlag != 0
+				}
+				if end {
+					r.cmtPending = nil
+				} else if blk.flags&lhdSplitAfter != 0 {
+					if cont {
+						r.cmtPending.data.continued = true
+					} else {
+						r.cmtPending = f
+					}
+				}
 			default:
-				// 注释/恢复记录/签名/子块等：按头长+数据长跳过。
+				// 旧式注释/恢复记录/签名等：按头长+数据长跳过。
 			}
 		}
 		if !ended {
 			r.volNext = append(r.volNext, false)
 		}
 	}
-	return r.checkVolumes()
+	if err := r.checkVolumes(); err != nil {
+		return err
+	}
+	r.finishComment()
+	return nil
 }
 
 // scan4Encrypted 扫描头加密的 RAR4。

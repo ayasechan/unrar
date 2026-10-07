@@ -13,7 +13,7 @@ HEAD_FLAGS 通用位：0x8000 LONG_BLOCK（块后跟 ADD_SIZE 字节数据），
 ## 块类型
 
 0x72 MARK，0x73 MAIN（卷/solid/注释/恢复记录/头加密标记），0x74 FILE，
-0x75 CMT，0x76 AV，0x77 SUB，0x78 RR（嵌入式恢复记录，XOR，512B 扇区），
+0x75 CMT（旧式），0x76 AV，0x77 SUB，0x78 RR（嵌入式恢复记录，XOR，512B 扇区），
 0x79 SIGN，0x7A NEW_SUB，0x7B ENDARC（下卷/末卷标记）。
 
 ## MAIN_HEAD 要点
@@ -33,8 +33,19 @@ NAME_SIZE u16le，ATTR u32le，大文件时有 HIGH_PACK/HIGH_UNP，其后 NAME�
 ANSI 名经 `WithFilenameEncoding` 按指定字符集解码，缺省原字节直透）。
 
 文件私有标志：0x01 接上卷（split-before），0x02 续到下卷（split-after），
-0x04 加密，0x08 注释，0x10 solid（必须按序解，依赖之前字典状态）。
+0x04 加密，0x08 注释（旧式文件注释，已废弃），0x10 solid（必须按序解，依赖之前字典状态）。
 目录：METHOD 0x30 且 UNP_SIZE 0，加 DOS 目录属性位。
+
+## 归档注释（CMT 子块）
+
+类型 0x7A NEW_SUB 中名为 `CMT` 的是归档注释，头体布局与 FILE_HEAD 相同
+（ATTR 字段复用为子块标志：bit0 置位表示内容为 UTF-16LE，否则为 ANSI 原字节）。
+注释数据按文件流同管线单次解出（stored，或 unpack29 且 unpVer==29，CRC32 校验；
+v15/v20 等其他算法的 CMT 按解码失败留空），全新解包状态（不复用固实链），
+读取时截 NUL：ANSI 与 RAR5 按单字节 NUL 截断，RAR4 UTF-16LE 按宽 NUL 截断。分段拼接走与文件相同的路径（暂无跨卷注释夹具）。
+解出上限 16MB（0x1000000 字节），任何解码失败均留空，不影响归档打开。
+非 CMT 子块解析后丢弃，不进文件表。类型 0x75 旧式注释头本库无对应解包器（v15/v20 时代算法不支持），
+扫描时一律跳过。
 
 ## 解压相关注意
 

@@ -15,6 +15,7 @@ func FuzzReader(f *testing.F) {
 		"t4m5s.rar", "t5m5s.rar", "t4ppm.rar", "t4fexe.rar",
 		"t4mv.part01.rar", "t5mv.part01.rar",
 		"t4p.rar", "t5p.rar",
+		"t4cmt.rar", "t5cmt.rar",
 	}
 	for _, s := range seeds {
 		b, err := os.ReadFile(filepath.Join("testdata", s))

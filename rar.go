@@ -89,6 +89,12 @@ type Reader struct {
 	Version  int // 4 或 5
 	solidArc bool
 
+	// cmtFile 是扫描期记录的归档注释（CMT 服务块）描述，不进入 File 表；
+	// cmtPending 暂存跨卷未闭合的注释分段；cmtUnicode 表示 RAR4 注释内容为 UTF-16LE。
+	cmtFile    *File
+	cmtPending *File
+	cmtUnicode bool
+
 	opts Options
 	vols []openedVolume
 

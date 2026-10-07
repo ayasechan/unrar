@@ -16,6 +16,8 @@ ErrMissingVolume（带缺失卷名），不做猜测性跳过。
 - 头加密时：先读 ENCRYPTION 参数、派生密钥、解密后再解析（错密码在校验处暴露）。
 - 建文件表：name、unpacked 大小、mtime、属性、是否目录/solid/跨卷/加密、
   数据在各卷的 (卷号, 偏移, 长度) 分段表。
+- CMT 注释块（RAR4 NEW_SUB / RAR5 SERVICE，名 `CMT`）截留为内部描述，不进文件表
+  （首个胜出）；`checkVolumes` 通过后 `finishComment` 解出，任何失败留空。
 
 ## 3. 跨卷拼接
 
@@ -36,6 +38,9 @@ solid 文件必须从 solid 链起点按序解，随机 Open 需内部顺序推�
 - RAR5：Huffman 解码 literal/match 长度 + LZ 窗口拷贝，字典上限 1GB，
   窗口内存复用，超限报 ErrUnsupported 而非 OOM。
 - PPM：文本压缩分支，大表，同样限内存。
+- 注释走同管线单次解出：stored，或 RAR4-unpack29（unpVer==29）/ RAR5-主算法（unpVer==0），
+  全新解包状态（不复用固实链），CRC/BLAKE2 照常校验，上限 16MB（0x1000000 字节），
+  任何失败留空、不向 `OpenReader` 抛错。
 
 ## 6. 过滤器
 

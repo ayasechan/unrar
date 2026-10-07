@@ -161,15 +161,37 @@ func (r *Reader) scan5() error {
 					next = true
 				}
 				r.volNext = append(r.volNext, next)
+			case head5Service:
+				// 服务块与文件头同布局；名为 CMT 的是归档注释，其余跳过。
+				f, cont, end, err := r.parseFile5(vi, blk, r.cmtPending)
+				if err != nil {
+					return err
+				}
+				if !cont && f.Name == cmtServiceName && r.cmtFile == nil {
+					r.cmtFile = f
+				}
+				if end {
+					r.cmtPending = nil
+				} else if blk.splitAfter {
+					if cont {
+						r.cmtPending.data.continued = true
+					} else {
+						r.cmtPending = f
+					}
+				}
 			default:
-				// MAIN / SERVICE：位置已由块长推进，无需处理。
+				// MAIN：位置已由块长推进，无需处理。
 			}
 		}
 		if !ended {
 			r.volNext = append(r.volNext, false)
 		}
 	}
-	return r.checkVolumes()
+	if err := r.checkVolumes(); err != nil {
+		return err
+	}
+	r.finishComment()
+	return nil
 }
 
 // block5 是一个 RAR5 块。
