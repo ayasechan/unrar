@@ -7,7 +7,7 @@ import (
 	"io"
 
 	"github.com/ayasechan/unrar/internal/bitio"
-	"github.com/ayasechan/unrar/internal/blake2s"
+	"github.com/ayasechan/unrar/internal/blake2sp"
 )
 
 // cmtServiceName 是归档注释服务块名（RAR4 NEW_SUB / RAR5 SERVICE 通用）。
@@ -114,9 +114,9 @@ func (r *Reader) decodeOne29(cf *File, w io.Writer) error {
 	}
 	h := crc32.NewIEEE()
 	out := io.MultiWriter(h, w)
-	var b2 *blake2s.Hash
+	var b2 *blake2sp.Hash
 	if len(cf.data.blake2) > 0 {
-		b2 = blake2s.New()
+		b2 = blake2sp.New()
 		out = io.MultiWriter(h, b2, w)
 	}
 	if err := u.decode(br, out, dest); err != nil {
@@ -156,9 +156,9 @@ func (r *Reader) decodeOne50(cf *File, w io.Writer) error {
 	}
 	h := crc32.NewIEEE()
 	out := io.MultiWriter(h, w)
-	var b2 *blake2s.Hash
+	var b2 *blake2sp.Hash
 	if len(cf.data.blake2) > 0 {
-		b2 = blake2s.New()
+		b2 = blake2sp.New()
 		out = io.MultiWriter(h, b2, w)
 	}
 	if err := u.decode(br, out, dest); err != nil {

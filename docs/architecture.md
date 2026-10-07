@@ -12,7 +12,7 @@
 | `internal/rarvm` | RAR3 六种标准过滤器（E8/E8E9/Itanium/Delta/RGB/Audio，以字节码长度与 CRC32 识别类型） |
 | `internal/ppm` | PPMd 阶模型、子分配器（偏移式 arena） |
 | `internal/rarcrypt` | SHA-1（含 RAR2.9 变体）、KDF3、PBKDF2-HMAC-SHA256、AES-CBC、口令编码 |
-| `internal/blake2s` | BLAKE2s-256（基于 `golang.org/x/crypto`，amd64 汇编加速，旧纯 Go 实现金值交叉验证） |
+| `internal/blake2sp` | BLAKE2sp-256（8 叶并行 BLAKE2s + 根哈希，纯 Go，官方 KAT 向量验证） |
 | `internal/rs8` | GF(256) Reed-Solomon 纠删（RAR4 恢复卷） |
 | `internal/rs16` | GF(2^16) Cauchy 矩阵 RS（RAR5 恢复卷） |
 | `internal/vint` | RAR5 小端 7bit 续位可变长整数 |
@@ -38,7 +38,7 @@
 4. **解密**：RAR4 AES-128-CBC，RAR5 PBKDF2 派生后 AES-256-CBC；CBC 跨卷连续。
 5. **解压**：stored 直拷；RAR4 unpack29；RAR5 unpack50；PPMd 文本分支。固实链复用解包器状态（窗口、表、OldDist 常驻），位流每文件重起。
 6. **过滤器**：RAR4 走标准过滤器程序；RAR5 走原生 Delta/E8/E8E9/ARM 实现。
-7. **校验输出**：CRC32 与可选 BLAKE2s（含 RAR5 HMAC 变体）；流式输出，不一次性进内存。
+7. **校验输出**：CRC32 与可选 BLAKE2sp（含 RAR5 HMAC 变体）；流式输出，不一次性进内存。
 
 ## 并发与内存模型
 

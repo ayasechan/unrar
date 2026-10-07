@@ -10,7 +10,7 @@ import (
 	"hash/crc32"
 	"io"
 
-	"github.com/ayasechan/unrar/internal/blake2s"
+	"github.com/ayasechan/unrar/internal/blake2sp"
 	"github.com/ayasechan/unrar/internal/rarcrypt"
 )
 
@@ -154,7 +154,7 @@ type streamCheck struct {
 	pswChecked bool
 }
 
-// checkFile 校验解出数据的 CRC32/BLAKE2s。
+// checkFile 校验解出数据的 CRC32/BLAKE2sp。
 // RAR5 加密：优先 MAC（置位时），否则 plain；部分版本多卷省略置位仍存 MAC 值，
 // plain 失败时补试 MAC（两者皆为不可伪造的完整性证明）。
 // 加密且无预检时的失败映射为 ErrWrongPassword，其余为 ErrChecksum。
@@ -234,10 +234,10 @@ func (c *cbcReader) Read(p []byte) (int, error) {
 	return n, nil
 }
 
-// verifier 在流式读取的同时算 CRC32（与可选 BLAKE2s），读尽时按 checkFile 校验。
+// verifier 在流式读取的同时算 CRC32（与可选 BLAKE2sp），读尽时按 checkFile 校验。
 type verifier struct {
 	crc   hash.Hash32
-	blake *blake2s.Hash
+	blake *blake2sp.Hash
 	fd    *fileData
 	sc    streamCheck
 	done  bool
@@ -248,7 +248,7 @@ type verifier struct {
 func newVerifier(r io.Reader, fd *fileData, sc streamCheck) *verifier {
 	v := &verifier{r: r, crc: crc32.NewIEEE(), fd: fd, sc: sc}
 	if len(fd.blake2) > 0 {
-		v.blake = blake2s.New()
+		v.blake = blake2sp.New()
 	}
 	return v
 }
@@ -302,7 +302,7 @@ func macCRC32(crc uint32, hashKey []byte) uint32 {
 	return out
 }
 
-// macBlake2 计算 HMAC 化的 BLAKE2s 期望值。
+// macBlake2 计算 HMAC 化的 BLAKE2sp 期望值。
 func macBlake2(digest, hashKey []byte) []byte {
 	d := hmacSHA256(hashKey, digest)
 	return d[:]

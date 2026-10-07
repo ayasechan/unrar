@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/ayasechan/unrar/internal/bitio"
-	"github.com/ayasechan/unrar/internal/blake2s"
+	"github.com/ayasechan/unrar/internal/blake2sp"
 )
 
 // openChain50 解 RAR5 固实链（或单文件）并返回目标文件流。
@@ -40,7 +40,7 @@ func (f *File) openChain50() (io.ReadCloser, error) {
 func (r *Reader) decodeChain50(start, idx int, w io.Writer) error {
 	u := &unpack50{}
 	h := crc32.NewIEEE()
-	var b2 *blake2s.Hash
+	var b2 *blake2sp.Hash
 	for i := start; i <= idx; i++ {
 		cf := r.File[i]
 		if cf.IsDir || cf.data.method == 0 {
@@ -65,7 +65,7 @@ func (r *Reader) decodeChain50(start, idx int, w io.Writer) error {
 		hasB2 := len(cf.data.blake2) > 0
 		if hasB2 {
 			if b2 == nil {
-				b2 = blake2s.New()
+				b2 = blake2sp.New()
 			} else {
 				b2.Reset()
 			}

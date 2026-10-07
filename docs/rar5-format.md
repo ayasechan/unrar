@@ -35,7 +35,7 @@ NAME_LEN vint + NAME（UTF-8）。
 ACL（NTFS 权限），STM（NTFS 流），RR（恢复记录）。名为 `CMT` 的是归档注释
 （位于 MAIN 之后、文件头之前）：体字段与 FILE 同布局，
 数据为 UTF-8（实测官方打包含尾零；读取时截首个 NUL），按文件流同管线单次解出
-（stored，或主算法且 unpVer==0；带 DATA_CRC32 则校验 CRC32，有 BLAKE2s 时并校验），
+（stored，或主算法且 unpVer==0；带 DATA_CRC32 则校验 CRC32，有 BLAKE2sp 时并校验），
 上限 16MB（0x1000000 字节），任何解码失败均留空；非 CMT 服务块（含 QO 缓存）解析后丢弃，
 不进文件表（`.rev` 恢复与 SERVICE 无关，见 volumes-recovery-crypto.md）。
 4 ENCRYPTION：头加密参数。版本（仅 0，即 AES-256），标志（0x01 含口令校验值），
@@ -56,7 +56,7 @@ salt/IV/校验；0x02 置位时校验码经 key 调制，校验走 MAC 双轨，
 - 明文卷每个头有 HEAD_CRC32，错则该卷报 `ErrChecksum` 损坏；头加密（CRYPT 后）卷的读头失败
   不报 `ErrChecksum`：无口令报 `ErrEncrypted`，有口令时预检命中报 `ErrWrongPassword`，
   无预检位时错密码解密失败（含 HEAD_CRC 错）报 `ErrEncrypted`。
-- 每个文件数据有 CRC32；可选 BLAKE2s-256（extra/标志指示），解密后校验，
+- 每个文件数据有 CRC32；可选 BLAKE2sp（extra/标志指示），解密后校验，
   错密码同样表现为校验失败，需映射为 ErrWrongPassword。
 - 字典大小由 FILE 压缩信息位域（11~15 位，128KB×2^N；v1 扩展至 64G）给出；
   本实现上限 1GB，超限报 ErrUnsupported（窗口复用/流式仍适用）。

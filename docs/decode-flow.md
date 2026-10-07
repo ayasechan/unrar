@@ -49,7 +49,7 @@ RAR4 仅执行 6 种标准过滤器（E8/E8E9/Itanium/Delta/RGB/Audio），以�
 
 ## 7. 校验与输出
 
-- RAR4：CRC32；RAR5：CRC32 + 可选 BLAKE2s-256（含 HMAC 变体，见 architecture.md 错误设计）。
+- RAR4：CRC32；RAR5：CRC32 + 可选 BLAKE2sp（含 HMAC 变体，见 architecture.md 错误设计）。
 - 校验错按 architecture.md 的映射原则报告为 ErrWrongPassword 或 ErrChecksum。
 - 输出为流式；每个 File.Open 使用独立 decoder，并发安全；大文件不一次性进内存。
 - 落盘相关的路径清理与链接策略见根 README，属调用方职责。

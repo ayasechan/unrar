@@ -50,7 +50,7 @@ func TestCorruptNeverPanics(t *testing.T) {
 	seeds := []string{
 		"t4store.rar", "t5store.rar", "t4m5.rar", "t5m5.rar",
 		"t4m5s.rar", "t5m5s.rar", "t4ppm.rar", "t4fexe.rar",
-		"t4cmt.rar", "t5cmt.rar",
+		"t4cmt.rar", "t5cmt.rar", "t5htb.rar",
 	}
 	xor := uint32(0x9e3779b9)
 	next := func() uint32 {

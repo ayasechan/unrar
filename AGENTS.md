@@ -5,7 +5,7 @@
 ## 布局
 
 - 根包承载全部公开 API 与格式装配：`rar.go`（`Reader`/`File`/`VolumeSet`/`RevSet`/`Option`）、`rar4.go`/`rar5.go`/`scan.go`（扫描）、`unpack29.go`/`unpack50.go` + `chain29.go`/`chain50.go` + `copystr.go`（解包装配）、`crypt.go`（加解密编排）、`recover.go`（恢复编排）。
-- `internal/` 为无归档上下文的纯算法（`bitio`/`huff`/`rarvm`/`ppm`/`rarcrypt`/`blake2s`/`rs8`/`rs16`/`vint`/`volumes`）；禁止引用根包，包之间保持单向依赖；归档逻辑只放根包。
+- `internal/` 为无归档上下文的纯算法（`bitio`/`huff`/`rarvm`/`ppm`/`rarcrypt`/`blake2sp`/`rs8`/`rs16`/`vint`/`volumes`）；禁止引用根包，包之间保持单向依赖；归档逻辑只放根包。
 
 ## 命令
 

@@ -25,7 +25,7 @@
 - RAR4：文件数据 AES-128-CBC；salt 8B 存于文件头；`-hp` 头加密时块头整体加密，
   未解密前看不到文件名。密钥派生用口令 + salt 的哈希链。
 - RAR5：PBKDF2-HMAC-SHA256（轮数存于 ENCRYPTION 块）派生，再 AES-256-CBC；
-  头加密同样覆盖后续全部头部；校验码（CRC32/BLAKE2s）同时作为密码正确性判据。
+  头加密同样覆盖后续全部头部；校验码（CRC32/BLAKE2sp）同时作为密码正确性判据。
 - API：WithPassword / WithPasswordReader（按文件回调，支持重试/多密码）；
   内存中的口令字节用完即清零；日志与错误信息永不回显口令；
   密码错误统一 ErrWrongPassword，不泄露是“无此文件”还是“密码错”（头加密时）。

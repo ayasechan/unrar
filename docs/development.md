@@ -39,6 +39,7 @@ go test -run=NONE -fuzz=FuzzReader -fuzztime=60s .
 2. **全显式开关**：格式（`-ma4`/`-ma5`）、方法（`-m0`…`-m5`）、固实（非固实必须显式 `-s-`，因 `rar a` 默认建固实归档）、分卷（`-v`）、口令（`-p`/`-hp`）全部显式给出，不依赖默认值。
 3. **内容对照**：每个夹具须经官方 `unrar t` 验证通过，再与 golden 逐字节对比后提交。
    注释夹具例外：注释是元数据，以测试内联期望值（`Reader.Comment` 直接断言）代替 golden 文件。
+   哈希记录型夹具用 `-htb` 显式开关打出（官方默认只存 CRC32，不带 BLAKE2sp 记录）。
 4. **体量控制**：优先小尺寸内容；大字典、多压缩块等边界用专用小夹具覆盖，不提交超大文件。
 
 工具链（仅作打包/验证工具，不入仓库）：官方 Linux 构建如 https://www.win-rar.com/fileadmin/winrar-versions/rarlinux-x64-624.tar.gz（6.24，保留 `-ma4` 可建 RAR4；注意 7.x 已移除 RAR4 创建）。

@@ -58,7 +58,7 @@ type fileData struct {
 	unpSize     uint64
 	crc         uint32
 	hasCRC      bool
-	blake2      []byte // RAR5 可选 BLAKE2s-256（加密阶段用于校验）。
+	blake2      []byte // RAR5 可选 BLAKE2sp 摘要（加密阶段用于校验）。
 	encrypted   bool
 	solid       bool
 	splitAfter  bool

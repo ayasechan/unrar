@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"time"
 
+	"github.com/ayasechan/unrar/internal/blake2sp"
 	"github.com/ayasechan/unrar/internal/rarcrypt"
 	"github.com/ayasechan/unrar/internal/vint"
 )
@@ -573,8 +574,9 @@ func parseExtra5(extra []byte) (crypt5, fileTime5, []byte) {
 			crypt = parseCrypt5(body)
 		case extraHash:
 			if len(body) > 1 {
-				// 首 vint 为 HASH 类型（0 = BLAKE2s-256），余下为摘要。
-				if _, n, err := vint.Decode(body); err == nil && n < len(body) {
+				// 首 vint 为 HASH 类型（0 = BLAKE2sp），余下 32B 为摘要；
+				// 未知类型或长度不符则丢弃该记录（仍以 CRC32 为准）。
+				if typ, n, err := vint.Decode(body); err == nil && typ == 0 && len(body)-n == blake2sp.Size {
 					hash = append([]byte(nil), body[n:]...)
 				}
 			}
