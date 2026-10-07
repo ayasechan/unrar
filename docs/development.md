@@ -43,6 +43,8 @@ go test -run=NONE -fuzz=FuzzReader -fuzztime=60s .
 
 工具链（仅作打包/验证工具，不入仓库）：官方 Linux 构建如 https://www.win-rar.com/fileadmin/winrar-versions/rarlinux-x64-624.tar.gz（6.24，保留 `-ma4` 可建 RAR4；注意 7.x 已移除 RAR4 创建）。
 
+参考实现（仅作格式对照，不引用、不入仓库）：UnRAR 源码 https://www.rarlab.com/rar/unrarsrc-7.3.1.tar.gz。
+
 ## 编码约定
 
 - 公开 API 变更须同步更新根 `README.md`（用户视角）与本目录文档（实现视角）。

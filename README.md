@@ -76,7 +76,7 @@ RAR5 文件名为 UTF-8，直接可用。RAR4 文件名带 Unicode 扩展时自�
 r, _ := rar.OpenReader("old.rar", rar.WithFilenameEncoding(rar.EncodingGBK))
 ```
 
-可选 `EncodingGBK/EncodingBig5/EncodingShiftJIS/EncodingEUCKR`；缺省、`utf-8` 与未知取值均为直透。坏字节替换为 U+FFFD，不报错。
+可选 `EncodingGBK/EncodingBig5/EncodingShiftJIS/EncodingEUCKR`；缺省、`utf-8` 与未知取值均为直透。仅指定已知字符集解码时，坏字节替换为 U+FFFD，不报错。
 
 ### 缺卷恢复
 

@@ -328,7 +328,8 @@ var filenameDecoders = map[FilenameEncoding]encoding.Encoding{
 	EncodingEUCKR:    korean.EUCKR,
 }
 
-// decodeANSIName 解 RAR4 纯 ANSI 文件名；坏字节替换为 U+FFFD，不报错。
+// decodeANSIName 解 RAR4 纯 ANSI 文件名；已知字符集解码时坏字节替换为 U+FFFD，
+// 未登记字符集原字节直透，均不报错。
 func decodeANSIName(raw []byte, enc FilenameEncoding) string {
 	if e, ok := filenameDecoders[enc]; ok {
 		if s, err := e.NewDecoder().Bytes(raw); err == nil {

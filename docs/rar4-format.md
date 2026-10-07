@@ -29,12 +29,14 @@ HOST_OS u8，FILE_CRC u32le（IEEE CRC32），FTIME u32le（DOS 时间，有扩�
 UNP_VER u8（15/20/29，对应 1.5/2.0/2.9+ 解包算法），METHOD u8
 （0x30 store，0x31 fastest，0x32 fast，0x33 normal，0x34 good，0x35 best），
 NAME_SIZE u16le，ATTR u32le，大文件时有 HIGH_PACK/HIGH_UNP，其后 NAME，
-加密时再有 SALT 8B，最后扩展时间（flag 高位为 1 时 NAME 为 UTF-16LE，否则 ANSI；
+加密时再有 SALT 8B，最后扩展时间（FILE_HEAD 私有标志 0x0200（LHD_UNICODE）置位时
+NAME 为 ANSI+NUL+编码尾组合编码（见 `decodeUnicodeName`），否则为纯 ANSI 名；
 ANSI 名经 `WithFilenameEncoding` 按指定字符集解码，缺省原字节直透）。
 
 文件私有标志：0x01 接上卷（split-before），0x02 续到下卷（split-after），
 0x04 加密，0x08 注释（旧式文件注释，已废弃），0x10 solid（必须按序解，依赖之前字典状态）。
-目录：METHOD 0x30 且 UNP_SIZE 0，加 DOS 目录属性位。
+目录：FILE_HEAD 私有标志窗口位全 1（flags&0xE0==0xE0）即为目录；
+unpVer<20 时 DOS 目录属性位（attr&0x10）亦判为目录。不检查 METHOD/UNP_SIZE。
 
 ## 归档注释（CMT 子块）
 
@@ -51,4 +53,6 @@ v15/v20 等其他算法的 CMT 按解码失败留空），全新解包状态（�
 
 - solid 文件必须从 solid 链起点按序解，不可随机跳。
 - 跨卷文件 PACK 流分布在多卷，需拼接后再送解包器。
-- 头加密时文件名/大小不可见，错密码表现为校验失败。
+- 头加密时文件名/大小在扫描期不可见：无口令报 `ErrEncrypted`；有口令但错误时 RAR4
+  扫描期读头失败统一映射为 `ErrEncrypted`（底层 CRC/长度错误不直接暴露）。数据区加密
+  （非头加密）错口令按校验映射为 `ErrWrongPassword`，未加密损坏才报 `ErrChecksum`。
