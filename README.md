@@ -76,7 +76,13 @@ RAR5 文件名为 UTF-8，直接可用。RAR4 文件名带 Unicode 扩展时自�
 r, _ := rar.OpenReader("old.rar", rar.WithFilenameEncoding(rar.EncodingGBK))
 ```
 
-可选 `EncodingGBK/EncodingBig5/EncodingShiftJIS/EncodingEUCKR`；缺省、`utf-8` 与未知取值均为直透。仅指定已知字符集解码时，坏字节替换为 U+FFFD，不报错。
+可选 `EncodingGBK/EncodingBig5/EncodingShiftJIS/EncodingEUCKR`；`FilenameEncoding` 本质为字符串，亦可传其它 WHATWG 别名，按 `htmlindex` 解码（大小写不敏感）：
+
+```go
+r, _ := rar.OpenReader("old.rar", rar.WithFilenameEncoding(rar.FilenameEncoding("windows-1251")))
+```
+
+缺省、空、`utf-8`/`utf8`（不分大小写）与无法识别的取值为原字节直透。已知字符集解码时坏字节替换为 U+FFFD，不报错。其它示例：`koi8-r`、`iso-8859-1`、`gb18030`、`shift-jis`/`shift_jis`、`euc-kr`。
 
 ### 缺卷恢复
 

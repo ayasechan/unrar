@@ -66,7 +66,10 @@ const (
 )
 
 // WithFilenameEncoding 指定 RAR4 纯 ANSI 文件名的解码字符集。
-// 缺省（空或 utf-8）保持原字节直透；未知取值同样回落直透。
+// 缺省（空或 utf-8/utf8，不分大小写）保持原字节直透。
+// 除 5 个预定义常量外，可传任意 WHATWG/HTML 标准别名（如 "windows-1251"、
+// "koi8-r"、"iso-8859-1"、"gb18030"，大小写不敏感），按 htmlindex 解码；
+// 无法识别的取值同样回落直透。坏字节替换为 U+FFFD，不报错。
 func WithFilenameEncoding(enc FilenameEncoding) Option {
 	return func(o *Options) { o.filenameEncoding = enc }
 }

@@ -31,7 +31,9 @@ UNP_VER u8（15/20/29，对应 1.5/2.0/2.9+ 解包算法），METHOD u8
 NAME_SIZE u16le，ATTR u32le，大文件时有 HIGH_PACK/HIGH_UNP，其后 NAME，
 加密时再有 SALT 8B，最后扩展时间（FILE_HEAD 私有标志 0x0200（LHD_UNICODE）置位时
 NAME 为 ANSI+NUL+编码尾组合编码（见 `decodeUnicodeName`），否则为纯 ANSI 名；
-ANSI 名经 `WithFilenameEncoding` 按指定字符集解码，缺省原字节直透）。
+ANSI 名经 `WithFilenameEncoding` 按指定字符集解码：5 个预定义常量精确匹配优先，
+其它 WHATWG 别名（如 windows-1251、koi8-r、iso-8859-1、gb18030）经 htmlindex 解码，
+缺省（空/utf-8/utf8）与无法识别的取值原字节直透）。
 
 文件私有标志：0x01 接上卷（split-before），0x02 续到下卷（split-after），
 0x04 加密，0x08 注释（旧式文件注释，已废弃），0x10 solid（必须按序解，依赖之前字典状态）。

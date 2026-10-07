@@ -6,9 +6,11 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"golang.org/x/text/encoding"
+	"golang.org/x/text/encoding/htmlindex"
 	"golang.org/x/text/encoding/japanese"
 	"golang.org/x/text/encoding/korean"
 	"golang.org/x/text/encoding/simplifiedchinese"
@@ -319,8 +321,9 @@ func decodeUnicodeName(raw []byte) string {
 	return string(out)
 }
 
-// filenameDecoders 是 RAR4 纯 ANSI 文件名可选的字符集解码表。
-// 未登记（含空与 utf-8）一律回落原字节直透，缺省行为不变。
+// filenameDecoders 是 RAR4 纯 ANSI 文件名常用的字符集解码表（精确语义优先）。
+// 未登记时回退到 htmlindex 按 WHATWG 别名查找（如 windows-1251、koi8-r、
+// iso-8859-1、gb18030 等，大小写不敏感）；空与 utf-8（含 utf8 变体）一律回落原字节直透。
 var filenameDecoders = map[FilenameEncoding]encoding.Encoding{
 	EncodingGBK:      simplifiedchinese.GBK,
 	EncodingBig5:     traditionalchinese.Big5,
@@ -329,9 +332,19 @@ var filenameDecoders = map[FilenameEncoding]encoding.Encoding{
 }
 
 // decodeANSIName 解 RAR4 纯 ANSI 文件名；已知字符集解码时坏字节替换为 U+FFFD，
-// 未登记字符集原字节直透，均不报错。
+// 未登记且 htmlindex 亦未知时原字节直透，均不报错。
 func decodeANSIName(raw []byte, enc FilenameEncoding) string {
 	if e, ok := filenameDecoders[enc]; ok {
+		if s, err := e.NewDecoder().Bytes(raw); err == nil {
+			return string(s)
+		}
+		return string(raw)
+	}
+	name := strings.ToLower(strings.TrimSpace(string(enc)))
+	if name == "" || name == "utf-8" || name == "utf8" {
+		return string(raw)
+	}
+	if e, err := htmlindex.Get(string(enc)); err == nil {
 		if s, err := e.NewDecoder().Bytes(raw); err == nil {
 			return string(s)
 		}
