@@ -11,6 +11,7 @@ func BenchmarkCopyStringDist1(b *testing.B) {
 	w := &lzWindow{}
 	w.resetFresh(winSize)
 	w.win[0] = 0xab
+	b.SetBytes(4096)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		w.unpPtr = 1
@@ -27,6 +28,7 @@ func BenchmarkCopyStringDist4(b *testing.B) {
 	for i := uint64(0); i < 4; i++ {
 		w.win[i] = byte(i)
 	}
+	b.SetBytes(8)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		w.unpPtr = 4
@@ -59,6 +61,7 @@ func BenchmarkCopyStringLen2(b *testing.B) {
 	for i := uint64(0); i < 256; i++ {
 		w.win[i] = byte(i)
 	}
+	b.SetBytes(2)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		w.unpPtr = 128

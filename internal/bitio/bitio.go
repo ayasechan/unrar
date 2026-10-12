@@ -26,7 +26,9 @@ func NewReader(src io.Reader) *Reader {
 }
 
 // GetBits 预览当前位置 16 位（MSB 优先），不消费。
+// 首行显式边界检查让编译器消除后续访存检查；调用方保证位流不断流。
 func (b *Reader) GetBits() uint16 {
+	_ = b.Buf[b.InAddr+2]
 	b0 := uint32(b.Buf[b.InAddr])
 	b1 := uint32(b.Buf[b.InAddr+1])
 	b2 := uint32(b.Buf[b.InAddr+2])
@@ -47,7 +49,9 @@ func (b *Reader) NeedRefill() bool {
 }
 
 // GetBits32 预览当前位置 32 位（MSB 优先），不消费。
+// 首行显式边界检查让编译器消除后续访存检查；调用方保证位流不断流。
 func (b *Reader) GetBits32() uint32 {
+	_ = b.Buf[b.InAddr+4]
 	hi := uint32(b.Buf[b.InAddr])<<24 | uint32(b.Buf[b.InAddr+1])<<16 |
 		uint32(b.Buf[b.InAddr+2])<<8 | uint32(b.Buf[b.InAddr+3])
 	lo := uint32(b.Buf[b.InAddr+4])
@@ -55,7 +59,9 @@ func (b *Reader) GetBits32() uint32 {
 }
 
 // GetBits64 预览当前位置 64 位（MSB 优先），不消费。
+// 首行显式边界检查让编译器消除后续访存检查；调用方保证位流不断流。
 func (b *Reader) GetBits64() uint64 {
+	_ = b.Buf[b.InAddr+8]
 	hi := uint64(b.Buf[b.InAddr])<<56 | uint64(b.Buf[b.InAddr+1])<<48 |
 		uint64(b.Buf[b.InAddr+2])<<40 | uint64(b.Buf[b.InAddr+3])<<32 |
 		uint64(b.Buf[b.InAddr+4])<<24 | uint64(b.Buf[b.InAddr+5])<<16 |

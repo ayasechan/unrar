@@ -42,6 +42,18 @@ func (w *lzWindow) insertOldDist(d uint64) {
 	w.oldDist[0] = d
 }
 
+// fwdDist 返回环形窗口中 b 到 a 的前向距离。
+// 调用方保证 a、b 均在 [0, winSize) 内。窗口为 2 的幂时与 (a-b)%winSize
+// 完全等价（2^64 为 winSize 倍数，回绕下 (a-b)%winSize == a+winSize-b）；
+// 非 2 的幂的 RAR5 字典下给出数学上预期的前向距离，且省去 64 位除法。
+// 解码主循环每符号命中一次，除法延迟约数十周期。
+func fwdDist(a, b, winSize uint64) uint64 {
+	if a >= b {
+		return a - b
+	}
+	return a + winSize - b
+}
+
 // smallOverlapScalar 是重叠拷贝走逐字节线性循环的长度上限。
 // 短匹配（len 2..10 为主）调一次 copy 的开销反而大于十几次赋值，
 // 超过该长度的重叠展开才值得用倍增 copy。
@@ -93,9 +105,12 @@ func (w *lzWindow) copyString(length, distance uint64) {
 			// src 在后（已回绕）读必先于写，或逻辑无交叠：一次 copy。
 			copy(w.win[dst:dst+chunk], w.win[src:src+chunk])
 		case chunk <= smallOverlapScalar:
-			// 短重叠：线性逐字节，无回绕分支。
-			for i := uint64(0); i < chunk; i++ {
-				w.win[dst+i] = w.win[src+i]
+			// 短重叠：线性逐字节递增，与逐字节语义一致且无回绕分支；
+			// 先切片一次，循环内无边界检查。
+			dstB := w.win[dst : dst+chunk]
+			srcB := w.win[src : src+chunk]
+			for i := range dstB {
+				dstB[i] = srcB[i]
 			}
 		default:
 			// 长重叠：先搬 distance 字节（与目标相邻无交叠），再倍增；

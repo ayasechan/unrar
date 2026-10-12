@@ -81,6 +81,7 @@ type unpack29 struct {
 	prgStack    []*filter30
 	oldLens     []uint64
 	lastFilter  uint64
+	sliceBuf    []byte // windowSlice 回绕拼接复用缓冲（仅 writeBuf30 内有效）。
 }
 
 // filter30 是 v29 过滤器（对齐 UnpackFilter30）。
@@ -162,7 +163,7 @@ func (u *unpack29) decode(br *bitio.Reader, out io.Writer, destSize int64) error
 				break
 			}
 		}
-		if u.wrPtr != u.unpPtr && (u.wrPtr-u.unpPtr)%u.winSize <= max3IncLZMatch {
+		if u.wrPtr != u.unpPtr && fwdDist(u.wrPtr, u.unpPtr, u.winSize) <= max3IncLZMatch {
 			u.writeBuf30()
 			if u.werr != nil {
 				return u.werr
@@ -294,7 +295,7 @@ func (u *unpack29) decodeLong(br *bitio.Reader, num uint) {
 // writeBuf30 把 WrPtr..UnpPtr 落盘，途中执行命中的过滤器。
 func (u *unpack29) writeBuf30() {
 	writtenBorder := u.wrPtr
-	writeSize := (u.unpPtr - writtenBorder) % u.winSize
+	writeSize := fwdDist(u.unpPtr, writtenBorder, u.winSize)
 	for i := 0; i < len(u.prgStack); i++ {
 		flt := u.prgStack[i]
 		if flt == nil {
@@ -305,11 +306,11 @@ func (u *unpack29) writeBuf30() {
 			continue
 		}
 		bs, bl := flt.blockStart, flt.blockLength
-		if (bs-writtenBorder)%u.winSize < writeSize {
+		if fwdDist(bs, writtenBorder, u.winSize) < writeSize {
 			if writtenBorder != bs {
 				u.writeArea(writtenBorder, bs)
 				writtenBorder = bs
-				writeSize = (u.unpPtr - writtenBorder) % u.winSize
+				writeSize = fwdDist(u.unpPtr, writtenBorder, u.winSize)
 			}
 			if bl <= writeSize {
 				blockEnd := (bs + bl) % u.winSize
@@ -331,7 +332,7 @@ func (u *unpack29) writeBuf30() {
 				}
 				u.writeFiltered(fd[:fsize])
 				writtenBorder = blockEnd
-				writeSize = (u.unpPtr - writtenBorder) % u.winSize
+				writeSize = fwdDist(u.unpPtr, writtenBorder, u.winSize)
 			} else {
 				for j := i; j < len(u.prgStack); j++ {
 					if f := u.prgStack[j]; f != nil && f.nextWindow {
@@ -359,7 +360,7 @@ func (u *unpack29) writeBuf30() {
 	u.wrPtr = u.unpPtr
 }
 
-// windowSlice 取窗口环形段（跨越尾部时拷贝拼接）。
+// windowSlice 取窗口环形段；跨越尾部时拷贝拼接到复用缓冲。
 func (u *unpack29) windowSlice(off, n uint64) []byte {
 	if n == 0 {
 		return nil
@@ -367,9 +368,12 @@ func (u *unpack29) windowSlice(off, n uint64) []byte {
 	if off+n <= u.winSize {
 		return u.win[off : off+n]
 	}
-	out := make([]byte, 0, n)
-	out = append(out, u.win[off:]...)
-	out = append(out, u.win[:n-(u.winSize-off)]...)
+	if uint64(cap(u.sliceBuf)) < n {
+		u.sliceBuf = make([]byte, n)
+	}
+	out := u.sliceBuf[:n]
+	k := copy(out, u.win[off:])
+	copy(out[k:], u.win[:n-uint64(k)])
 	return out
 }
 
@@ -495,7 +499,7 @@ func (u *unpack29) addVMCode(first uint32, code []byte) bool {
 	} else if filtPos < uint64(len(u.oldLens)) {
 		stackFilter.blockLength = u.oldLens[filtPos]
 	}
-	stackFilter.nextWindow = u.wrPtr != u.unpPtr && (u.wrPtr-u.unpPtr)%u.winSize <= blockStart
+	stackFilter.nextWindow = u.wrPtr != u.unpPtr && fwdDist(u.wrPtr, u.unpPtr, u.winSize) <= blockStart
 	stackFilter.prg.InitR[4] = uint32(stackFilter.blockLength)
 	if first&0x10 != 0 {
 		initMask := uint32(vmIn.GetBits()) >> 9

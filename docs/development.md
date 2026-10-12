@@ -20,6 +20,22 @@ go test -count=1 -run 'TestRecover' .                       # 恢复
 go test -run=NONE -bench=. -benchtime=1x .                  # 基准冒烟
 ```
 
+## 基准
+
+端到端解压基准（`bench_test.go`，按归档逐文件解出并丢弃，`SetBytes` 为总输出字节）
+覆盖 stored、各压缩方法 RAR4/RAR5、固实、PPM、EXE/多媒体过滤器、多分卷与加密归档；
+微基准覆盖 Huffman 解码、位流取值、BLAKE2sp/CRC32、AES-CBC、RAR5 Delta/E8 过滤器；
+`copystr_bench_test.go` 覆盖滑动窗口拷贝各场景。加密基准在计时前预热一次，
+使口令 KDF 缓存命中，只度量稳态解密与解压。
+
+```sh
+go test -run=NONE -bench='BenchmarkDecompress' -benchtime=3x -count=3 .   # 端到端对照取中位数
+go test -run=NONE -bench='BenchmarkHuffDecode|BenchmarkBitioGetAdd' -benchtime=1s .  # 微基准
+```
+
+小夹具（毫秒级）受调度抖动影响大，单次 `-benchtime=1x` 样本不可比；
+优化前后对照须用相同 `-benchtime` 与 `-count>=3`，取中位数比较。
+
 破坏输入不变式由 `TestCorruptNeverPanics` 覆盖：随机破坏夹具只允许报错，不允许 panic。
 
 ## Fuzz

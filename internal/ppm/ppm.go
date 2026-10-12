@@ -116,6 +116,7 @@ func (p *PPM) suffix(ctx int) int     { return p.sub.getU32(ctx + 8) }
 func (p *PPM) setSuffix(ctx, v int)   { p.sub.setU32(ctx+8, v) }
 
 func (p *PPM) readState(off int) ppmState {
+	_ = p.sub.heap[off+5]
 	return ppmState{
 		sym:  p.sub.heap[off],
 		freq: p.sub.heap[off+1],
@@ -124,6 +125,7 @@ func (p *PPM) readState(off int) ppmState {
 }
 
 func (p *PPM) writeState(off int, st ppmState) {
+	_ = p.sub.heap[off+5]
 	p.sub.heap[off] = st.sym
 	p.sub.heap[off+1] = st.freq
 	p.sub.setU32(off+2, st.succ)

@@ -34,20 +34,25 @@ type subAlloc struct {
 }
 
 func (s *subAlloc) getU16(off int) uint16 {
+	// 首行显式边界检查，后续同对象访存由编译器消除；越界行为不变（panic）。
+	_ = s.heap[off+1]
 	return uint16(s.heap[off]) | uint16(s.heap[off+1])<<8
 }
 
 func (s *subAlloc) setU16(off int, v uint16) {
+	_ = s.heap[off+1]
 	s.heap[off] = byte(v)
 	s.heap[off+1] = byte(v >> 8)
 }
 
 func (s *subAlloc) getU32(off int) int {
+	_ = s.heap[off+3]
 	return int(uint32(s.heap[off]) | uint32(s.heap[off+1])<<8 |
 		uint32(s.heap[off+2])<<16 | uint32(s.heap[off+3])<<24)
 }
 
 func (s *subAlloc) setU32(off, v int) {
+	_ = s.heap[off+3]
 	s.heap[off] = byte(v)
 	s.heap[off+1] = byte(v >> 8)
 	s.heap[off+2] = byte(v >> 16)

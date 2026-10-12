@@ -67,7 +67,8 @@ func MakeTables(lengthTable []byte, size int) *Table {
 	return t
 }
 
-// Decode 解一个码字。
+// Decode 解一个码字。快路（短码）保持精简以便内联进解包主循环，
+// 长码走 decodeSlow。
 func (t *Table) Decode(br *bitio.Reader) uint {
 	field := uint(br.GetBits()) & 0xfffe
 	if field < t.DecodeLen[t.QuickBits] {
@@ -75,6 +76,11 @@ func (t *Table) Decode(br *bitio.Reader) uint {
 		br.AddBits(t.QuickLen[code])
 		return uint(t.QuickNum[code])
 	}
+	return t.decodeSlow(br, field)
+}
+
+//go:noinline
+func (t *Table) decodeSlow(br *bitio.Reader, field uint) uint {
 	bits := uint(15)
 	for i := t.QuickBits + 1; i < 15; i++ {
 		if field < t.DecodeLen[i] {

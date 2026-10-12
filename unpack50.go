@@ -154,7 +154,7 @@ loop:
 				break
 			}
 		}
-		if u.writeBorder != u.unpPtr && (u.writeBorder-u.unpPtr)%u.winSize <= maxIncLZMatch5 {
+		if u.writeBorder != u.unpPtr && fwdDist(u.writeBorder, u.unpPtr, u.winSize) <= maxIncLZMatch5 {
 			u.writeBuf()
 			if u.werr != nil {
 				return u.werr
@@ -436,7 +436,7 @@ func (u *unpack50) addFilter(flt filter5) bool {
 			u.filters = nil
 		}
 	}
-	flt.nextWindow = u.wrPtr != u.unpPtr && (u.wrPtr-u.unpPtr)%u.winSize <= flt.start
+	flt.nextWindow = u.wrPtr != u.unpPtr && fwdDist(u.wrPtr, u.unpPtr, u.winSize) <= flt.start
 	flt.start = (flt.start + u.unpPtr) % u.winSize
 	u.filters = append(u.filters, flt)
 	return true
@@ -445,7 +445,7 @@ func (u *unpack50) addFilter(flt filter5) bool {
 // writeBuf 落盘并执行命中的过滤器。
 func (u *unpack50) writeBuf() {
 	writtenBorder := u.wrPtr
-	fullWrite := (u.unpPtr - writtenBorder) % u.winSize
+	fullWrite := fwdDist(u.unpPtr, writtenBorder, u.winSize)
 	writeLeft := fullWrite
 	notAll := false
 	for i := 0; i < len(u.filters); i++ {
@@ -454,17 +454,17 @@ func (u *unpack50) writeBuf() {
 			continue
 		}
 		if flt.nextWindow {
-			if (flt.start-u.wrPtr)%u.winSize <= fullWrite {
+			if fwdDist(flt.start, u.wrPtr, u.winSize) <= fullWrite {
 				flt.nextWindow = false
 			}
 			continue
 		}
 		bs, bl := flt.start, flt.length
-		if (bs-writtenBorder)%u.winSize < writeLeft {
+		if fwdDist(bs, writtenBorder, u.winSize) < writeLeft {
 			if writtenBorder != bs {
 				u.writeArea(writtenBorder, bs)
 				writtenBorder = bs
-				writeLeft = (u.unpPtr - writtenBorder) % u.winSize
+				writeLeft = fwdDist(u.unpPtr, writtenBorder, u.winSize)
 			}
 			if bl <= writeLeft {
 				if bl > 0 {
@@ -476,7 +476,7 @@ func (u *unpack50) writeBuf() {
 						u.writeFiltered(out)
 					}
 					writtenBorder = blockEnd
-					writeLeft = (u.unpPtr - writtenBorder) % u.winSize
+					writeLeft = fwdDist(u.unpPtr, writtenBorder, u.winSize)
 				}
 			} else {
 				u.wrPtr = writtenBorder
@@ -510,7 +510,7 @@ func (u *unpack50) writeBuf() {
 	}
 	u.writeBorder = (u.unpPtr + m) % u.winSize
 	if u.writeBorder == u.unpPtr ||
-		u.wrPtr != u.unpPtr && (u.wrPtr-u.unpPtr)%u.winSize < (u.writeBorder-u.unpPtr)%u.winSize {
+		u.wrPtr != u.unpPtr && fwdDist(u.wrPtr, u.unpPtr, u.winSize) < fwdDist(u.writeBorder, u.unpPtr, u.winSize) {
 		u.writeBorder = u.wrPtr
 	}
 }
